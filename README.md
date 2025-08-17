@@ -78,15 +78,15 @@ The app is hosted on **Streamlit Cloud**:
     └── config.toml         # Theme configuration
 ```
 
----
-
-## 🎯 Evaluation Criteria Coverage
-- **Completeness of SQL database** ✅
-- **Accuracy of SQL queries** ✅ (15 analytical queries)
-- **CRUD operations** ✅ (Add, Update, Delete)
-- **User-friendly interface** ✅ (custom theme, dashboard, charts)
+## ✨ Features
+- 📊 **15 Predefined Analytical Queries** with colorful charts (bar, pie).  
+- 🔎 **Custom SQL Query Executor** – evaluator can test any SQL query directly.  
+- 🏠 **Dashboard Overview** – key stats (providers, receivers, listings, claims).  
+- 🗂️ **CRUD Operations** – add, update, and delete food listings and claims.  
+- 🎯 **Filters** for quick search by city, food type, meal type, and claim status.  
+- 🎨 **Attractive UI** with emojis, colors, and charts for better user experience.  
 
 ---
 
 ## 📜 License
-This project is for academic purposes only.
+This project is developed **for academic purposes only**.  
