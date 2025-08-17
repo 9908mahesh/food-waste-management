@@ -130,16 +130,57 @@ elif choice == "📋 Claims":
 # ------------------------------
 elif choice == "📊 Analysis":
     st.subheader("Analytical Queries")
+
+    # Predefined queries (15 total)
     queries = {
         "Providers per City": "SELECT City, COUNT(*) AS provider_count FROM providers GROUP BY City ORDER BY provider_count DESC",
         "Receivers per City": "SELECT City, COUNT(*) AS receiver_count FROM receivers GROUP BY City ORDER BY receiver_count DESC",
         "Top Provider Types by Total Quantity": "SELECT Provider_Type, SUM(Quantity) AS total_qty FROM food_listings GROUP BY Provider_Type ORDER BY total_qty DESC",
-        "Claim Status Percentage": "SELECT Status, COUNT(*) * 100.0 / (SELECT COUNT(*) FROM claims) AS pct FROM claims GROUP BY Status",
+        "Contact Info of Providers in a City": "SELECT Name, Contact, City FROM providers WHERE City='Delhi'",  # Example fixed query
+        "Top Receivers by Claimed Quantity": """SELECT r.Name, SUM(f.Quantity) AS total_claimed 
+                                                FROM claims c 
+                                                JOIN receivers r ON c.Receiver_ID = r.Receiver_ID 
+                                                JOIN food_listings f ON c.Food_ID = f.Food_ID 
+                                                GROUP BY r.Name ORDER BY total_claimed DESC""",
+        "Total Quantity of Food Available": "SELECT SUM(Quantity) AS total_available FROM food_listings",
+        "City with Most Food Listings": """SELECT Location, COUNT(*) AS listings_count 
+                                           FROM food_listings 
+                                           GROUP BY Location ORDER BY listings_count DESC LIMIT 1""",
+        "Most Common Food Types": "SELECT Food_Type, COUNT(*) AS type_count FROM food_listings GROUP BY Food_Type ORDER BY type_count DESC",
+        "Claims per Food Item": """SELECT f.Food_Name, COUNT(c.Claim_ID) AS claims_count 
+                                   FROM claims c 
+                                   JOIN food_listings f ON c.Food_ID = f.Food_ID 
+                                   GROUP BY f.Food_Name ORDER BY claims_count DESC""",
+        "Top Provider by Completed Claims": """SELECT p.Name, COUNT(c.Claim_ID) AS completed_claims 
+                                               FROM claims c 
+                                               JOIN food_listings f ON c.Food_ID = f.Food_ID 
+                                               JOIN providers p ON f.Provider_ID = p.Provider_ID 
+                                               WHERE c.Status = 'Completed' 
+                                               GROUP BY p.Name ORDER BY completed_claims DESC""",
+        "Claim Status Percentage": """SELECT Status, COUNT(*) * 100.0 / (SELECT COUNT(*) FROM claims) AS pct 
+                                      FROM claims GROUP BY Status""",
+        "Average Quantity Claimed per Receiver": """SELECT r.Name, AVG(f.Quantity) AS avg_claimed 
+                                                    FROM claims c 
+                                                    JOIN receivers r ON c.Receiver_ID = r.Receiver_ID 
+                                                    JOIN food_listings f ON c.Food_ID = f.Food_ID 
+                                                    GROUP BY r.Name ORDER BY avg_claimed DESC""",
+        "Most Claimed Meal Type": """SELECT Meal_Type, COUNT(*) AS meal_count 
+                                     FROM food_listings f 
+                                     JOIN claims c ON f.Food_ID = c.Food_ID 
+                                     GROUP BY Meal_Type ORDER BY meal_count DESC""",
+        "Total Quantity Donated by Each Provider": """SELECT p.Name, SUM(f.Quantity) AS total_donated 
+                                                      FROM food_listings f 
+                                                      JOIN providers p ON f.Provider_ID = p.Provider_ID 
+                                                      GROUP BY p.Name ORDER BY total_donated DESC""",
+        "Food Items Expiring Soon": "SELECT * FROM food_listings WHERE date(Expiry_Date) <= date('now','+3 day') ORDER BY Expiry_Date ASC"
     }
-    selected_query = st.selectbox("Select a Query", list(queries.keys()))
+
+    # Dropdown for predefined queries
+    selected_query = st.selectbox("Select a Predefined Query", list(queries.keys()))
     df = run_query(queries[selected_query])
     st.dataframe(df)
 
+    # Charting logic
     if "pct" in df.columns:
         fig = px.pie(df, names="Status", values="pct", title=selected_query)
     elif df.shape[1] == 2 and pd.api.types.is_numeric_dtype(df.iloc[:, 1]):
@@ -149,6 +190,23 @@ elif choice == "📊 Analysis":
 
     if fig:
         st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("---")
+    st.subheader("🔎 Custom SQL Query Executor")
+
+    # Custom SQL query input
+    custom_query = st.text_area("Enter your SQL query below and click Run:", height=120)
+    if st.button("Run Custom Query"):
+        try:
+            df_custom = run_query(custom_query)
+            if not df_custom.empty:
+                st.success("✅ Query executed successfully!")
+                st.dataframe(df_custom)
+            else:
+                st.info("ℹ️ Query executed but returned no results.")
+        except Exception as e:
+            st.error(f"❌ Error: {e}")
+
 
 # ------------------------------
 # CRUD Operations
