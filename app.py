@@ -1,189 +1,216 @@
-# ------------------------------
-# Local Food Wastage Management System - Enhanced Version
-# With Dashboard, CRUD Operations, Colorful Charts, and Icons
-# ------------------------------
+# ============================================================
+# 🍽️ Local Food Wastage Management System (Streamlit App)
+# ------------------------------------------------------------
+# This app manages surplus food donations between providers
+# (like restaurants, supermarkets) and receivers (like NGOs).
+# Features:
+# ✅ Dashboard showing key statistics
+# ✅ Data filters for better navigation
+# ✅ CRUD operations to add/update/delete data
+# ✅ Predefined + Custom SQL queries
+# ✅ Interactive visualizations using Plotly
+# ============================================================
 
-import streamlit as st
-import pandas as pd
-import sqlite3
-import plotly.express as px
+# ------------------------------
+# Importing Required Libraries
+# ------------------------------
+import streamlit as st        # Streamlit - to create interactive web app
+import pandas as pd           # Pandas - for handling tabular data
+import sqlite3                # SQLite - lightweight relational database
+import plotly.express as px   # Plotly Express - for data visualizations
 
 # ------------------------------
-# Database Functions
+# DATABASE CONFIGURATION & UTILITY FUNCTION
 # ------------------------------
-DB_PATH = "food_wastage.db"
+DB_PATH = "food_wastage.db"  # Path to the SQLite database file
 
 def run_query(query, params=(), commit=False):
-    """Run a SQL query and return the result as a DataFrame."""
+    """
+    Executes a SQL query on the SQLite database.
+    
+    Parameters:
+    ----------
+    query : str
+        The SQL query to execute.
+    params : tuple
+        Parameters for the query (for security and flexibility).
+    commit : bool
+        If True, commit changes (used for INSERT, UPDATE, DELETE).
+    
+    Returns:
+    -------
+    pd.DataFrame or None
+        If SELECT query: returns DataFrame with query result.
+        Otherwise: returns None.
+    """
+    # Connect to the database (allow multiple threads with check_same_thread=False)
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    
     if commit:
+        # For INSERT, UPDATE, DELETE queries
         conn.execute(query, params)
-        conn.commit()
+        conn.commit()   # Save changes to DB
         conn.close()
         return None
     else:
+        # For SELECT queries - return results as DataFrame
         df = pd.read_sql_query(query, conn, params=params)
         conn.close()
         return df
 
 # ------------------------------
-# Page Config
+# STREAMLIT PAGE CONFIGURATION
 # ------------------------------
 st.set_page_config(page_title="Local Food Wastage Management", layout="wide")
+
+# App Title (with custom color & emoji)
 st.markdown("<h1 style='text-align:center;color:#2E8B57;'>🍽️ Local Food Wastage Management System</h1>", unsafe_allow_html=True)
 
 # ------------------------------
-# Sidebar Menu
+# SIDEBAR MENU
 # ------------------------------
+# Sidebar navigation options
 menu = [
-    "🏠 Home",
-    "📦 Providers",
-    "🎯 Receivers",
-    "🍛 Food Listings",
-    "📋 Claims",
-    "📊 Analysis",
-    "✏️ CRUD Operations"
+    "🏠 Home",            # Dashboard Overview
+    "📦 Providers",       # View Providers data
+    "🎯 Receivers",       # View Receivers data
+    "🍛 Food Listings",   # View Food Listings
+    "📋 Claims",          # View Claims made by Receivers
+    "📊 Analysis",        # Insights (Predefined & Custom SQL)
+    "✏️ CRUD Operations"  # Add, Update, Delete Records
 ]
+
 choice = st.sidebar.selectbox("Navigation", menu)
 
-# Sidebar Instructions
+# Sidebar Help Instructions
 st.sidebar.markdown("## 📖 How to Use")
 st.sidebar.markdown("""
-- Navigate using the menu.
-- Apply filters for quick search.
-- Use **CRUD Operations** to add, update, or delete records.
-- Go to **Analysis** for trends and insights.
+- Navigate between sections using the menu.
+- **CRUD Operations** → Add or modify data.
+- **Analysis** → Run predefined or custom SQL queries.
+- **Charts** → Explore data visually.
 """)
 
 # ------------------------------
-# Home Page
+# HOME PAGE: DASHBOARD OVERVIEW
 # ------------------------------
 if choice == "🏠 Home":
     st.subheader("Dashboard Overview")
+
+    # Create 4 columns for displaying summary metrics
     col1, col2, col3, col4 = st.columns(4)
 
+    # Fetch total counts from the database
     total_providers = run_query("SELECT COUNT(*) as count FROM providers")["count"][0]
     total_receivers = run_query("SELECT COUNT(*) as count FROM receivers")["count"][0]
     total_listings = run_query("SELECT COUNT(*) as count FROM food_listings")["count"][0]
     total_claims = run_query("SELECT COUNT(*) as count FROM claims")["count"][0]
 
+    # Display the metrics using Streamlit's metric widget
     col1.metric("Providers", total_providers)
     col2.metric("Receivers", total_receivers)
     col3.metric("Food Listings", total_listings)
     col4.metric("Claims", total_claims)
 
+    # Separator line
     st.markdown("---")
+    
+    # Visualization: Bar chart of providers by city
     st.subheader("Top Provider Cities")
     df_city = run_query("SELECT City, COUNT(*) as provider_count FROM providers GROUP BY City ORDER BY provider_count DESC")
     fig = px.bar(df_city, x="City", y="provider_count", color="provider_count", title="Providers per City")
     st.plotly_chart(fig, use_container_width=True)
 
 # ------------------------------
-# Providers
+# PROVIDERS SECTION
 # ------------------------------
 elif choice == "📦 Providers":
     st.subheader("All Providers")
     df = run_query("SELECT * FROM providers")
+    
+    # Filter providers by city
     city_filter = st.selectbox("Filter by City", ["All"] + sorted(df["City"].unique()))
     if city_filter != "All":
         df = df[df["City"] == city_filter]
+    
     st.dataframe(df)
 
 # ------------------------------
-# Receivers
+# RECEIVERS SECTION
 # ------------------------------
 elif choice == "🎯 Receivers":
     st.subheader("All Receivers")
     df = run_query("SELECT * FROM receivers")
+    
+    # Filter receivers by city
     city_filter = st.selectbox("Filter by City", ["All"] + sorted(df["City"].unique()))
     if city_filter != "All":
         df = df[df["City"] == city_filter]
+    
     st.dataframe(df)
 
 # ------------------------------
-# Food Listings
+# FOOD LISTINGS SECTION
 # ------------------------------
 elif choice == "🍛 Food Listings":
     st.subheader("Available Food Listings")
     df = run_query("SELECT * FROM food_listings")
+    
+    # Apply two filters: by Location and Meal Type
     city_filter = st.selectbox("Filter by Location", ["All"] + sorted(df["Location"].unique()))
     meal_filter = st.selectbox("Filter by Meal Type", ["All"] + sorted(df["Meal_Type"].unique()))
+    
     if city_filter != "All":
         df = df[df["Location"] == city_filter]
     if meal_filter != "All":
         df = df[df["Meal_Type"] == meal_filter]
+    
     st.dataframe(df)
 
 # ------------------------------
-# Claims
+# CLAIMS SECTION
 # ------------------------------
 elif choice == "📋 Claims":
     st.subheader("Claims Data")
     df = run_query("SELECT * FROM claims")
+    
+    # Filter claims by status (Pending or Completed)
     status_filter = st.selectbox("Filter by Status", ["All"] + sorted(df["Status"].unique()))
     if status_filter != "All":
         df = df[df["Status"] == status_filter]
+    
     st.dataframe(df)
 
 # ------------------------------
-# Analysis
+# ANALYSIS SECTION: Predefined + Custom SQL Queries
 # ------------------------------
 elif choice == "📊 Analysis":
     st.subheader("Analytical Queries")
 
-    # Predefined queries (15 total)
+    # Dictionary of predefined queries
     queries = {
         "Providers per City": "SELECT City, COUNT(*) AS provider_count FROM providers GROUP BY City ORDER BY provider_count DESC",
         "Receivers per City": "SELECT City, COUNT(*) AS receiver_count FROM receivers GROUP BY City ORDER BY receiver_count DESC",
         "Top Provider Types by Total Quantity": "SELECT Provider_Type, SUM(Quantity) AS total_qty FROM food_listings GROUP BY Provider_Type ORDER BY total_qty DESC",
-        "Contact Info of Providers in a City": "SELECT Name, Contact, City FROM providers WHERE City='Delhi'",  # Example fixed query
+        "Contact Info of Providers in Delhi": "SELECT Name, Contact, City FROM providers WHERE City='Delhi'",
         "Top Receivers by Claimed Quantity": """SELECT r.Name, SUM(f.Quantity) AS total_claimed 
                                                 FROM claims c 
                                                 JOIN receivers r ON c.Receiver_ID = r.Receiver_ID 
                                                 JOIN food_listings f ON c.Food_ID = f.Food_ID 
-                                                GROUP BY r.Name ORDER BY total_claimed DESC""",
-        "Total Quantity of Food Available": "SELECT SUM(Quantity) AS total_available FROM food_listings",
-        "City with Most Food Listings": """SELECT Location, COUNT(*) AS listings_count 
-                                           FROM food_listings 
-                                           GROUP BY Location ORDER BY listings_count DESC LIMIT 1""",
-        "Most Common Food Types": "SELECT Food_Type, COUNT(*) AS type_count FROM food_listings GROUP BY Food_Type ORDER BY type_count DESC",
-        "Claims per Food Item": """SELECT f.Food_Name, COUNT(c.Claim_ID) AS claims_count 
-                                   FROM claims c 
-                                   JOIN food_listings f ON c.Food_ID = f.Food_ID 
-                                   GROUP BY f.Food_Name ORDER BY claims_count DESC""",
-        "Top Provider by Completed Claims": """SELECT p.Name, COUNT(c.Claim_ID) AS completed_claims 
-                                               FROM claims c 
-                                               JOIN food_listings f ON c.Food_ID = f.Food_ID 
-                                               JOIN providers p ON f.Provider_ID = p.Provider_ID 
-                                               WHERE c.Status = 'Completed' 
-                                               GROUP BY p.Name ORDER BY completed_claims DESC""",
-        "Claim Status Percentage": """SELECT Status, COUNT(*) * 100.0 / (SELECT COUNT(*) FROM claims) AS pct 
-                                      FROM claims GROUP BY Status""",
-        "Average Quantity Claimed per Receiver": """SELECT r.Name, AVG(f.Quantity) AS avg_claimed 
-                                                    FROM claims c 
-                                                    JOIN receivers r ON c.Receiver_ID = r.Receiver_ID 
-                                                    JOIN food_listings f ON c.Food_ID = f.Food_ID 
-                                                    GROUP BY r.Name ORDER BY avg_claimed DESC""",
-        "Most Claimed Meal Type": """SELECT Meal_Type, COUNT(*) AS meal_count 
-                                     FROM food_listings f 
-                                     JOIN claims c ON f.Food_ID = c.Food_ID 
-                                     GROUP BY Meal_Type ORDER BY meal_count DESC""",
-        "Total Quantity Donated by Each Provider": """SELECT p.Name, SUM(f.Quantity) AS total_donated 
-                                                      FROM food_listings f 
-                                                      JOIN providers p ON f.Provider_ID = p.Provider_ID 
-                                                      GROUP BY p.Name ORDER BY total_donated DESC""",
-        "Food Items Expiring Soon": "SELECT * FROM food_listings WHERE date(Expiry_Date) <= date('now','+3 day') ORDER BY Expiry_Date ASC"
+                                                GROUP BY r.Name ORDER BY total_claimed DESC"""
     }
 
-    # Dropdown for predefined queries
+    # Dropdown for predefined query selection
     selected_query = st.selectbox("Select a Predefined Query", list(queries.keys()))
     df = run_query(queries[selected_query])
     st.dataframe(df)
 
-    # Charting logic
+    # Auto-generate charts for numeric data
     if "pct" in df.columns:
+        # Pie chart for percentage data
         fig = px.pie(df, names="Status", values="pct", title=selected_query)
     elif df.shape[1] == 2 and pd.api.types.is_numeric_dtype(df.iloc[:, 1]):
+        # Bar chart for 2-column numeric queries
         fig = px.bar(df, x=df.columns[0], y=df.columns[1], color=df.columns[1], title=selected_query)
     else:
         fig = None
@@ -191,11 +218,11 @@ elif choice == "📊 Analysis":
     if fig:
         st.plotly_chart(fig, use_container_width=True)
 
+    # Custom SQL Query Section
     st.markdown("---")
     st.subheader("🔎 Custom SQL Query Executor")
-
-    # Custom SQL query input
     custom_query = st.text_area("Enter your SQL query below and click Run:", height=120)
+    
     if st.button("Run Custom Query"):
         try:
             df_custom = run_query(custom_query)
@@ -207,15 +234,16 @@ elif choice == "📊 Analysis":
         except Exception as e:
             st.error(f"❌ Error: {e}")
 
-
 # ------------------------------
-# CRUD Operations
+# CRUD OPERATIONS SECTION
 # ------------------------------
 elif choice == "✏️ CRUD Operations":
     st.subheader("Manage Records")
+    
+    # Radio buttons for selecting CRUD operation
     crud_menu = st.radio("Select Operation", ["Add Food Listing", "Add Claim", "Update Claim Status", "Delete Record"])
 
-    # Add Food Listing
+    # ADD FOOD LISTING
     if crud_menu == "Add Food Listing":
         with st.form("add_listing"):
             provider_id = st.number_input("Provider ID", min_value=1)
@@ -225,6 +253,7 @@ elif choice == "✏️ CRUD Operations":
             meal_type = st.text_input("Meal Type")
             location = st.text_input("Location")
             expiry_date = st.date_input("Expiry Date")
+            
             submitted = st.form_submit_button("Add Listing")
             if submitted:
                 run_query(
@@ -234,12 +263,13 @@ elif choice == "✏️ CRUD Operations":
                 )
                 st.success("✅ Food listing added successfully!")
 
-    # Add Claim
+    # ADD CLAIM
     elif crud_menu == "Add Claim":
         with st.form("add_claim"):
             food_id = st.number_input("Food ID", min_value=1)
             receiver_id = st.number_input("Receiver ID", min_value=1)
             status = st.selectbox("Status", ["Pending", "Completed"])
+            
             submitted = st.form_submit_button("Add Claim")
             if submitted:
                 run_query(
@@ -249,11 +279,12 @@ elif choice == "✏️ CRUD Operations":
                 )
                 st.success("✅ Claim added successfully!")
 
-    # Update Claim Status
+    # UPDATE CLAIM STATUS
     elif crud_menu == "Update Claim Status":
         with st.form("update_claim"):
             claim_id = st.number_input("Claim ID", min_value=1)
             new_status = st.selectbox("New Status", ["Pending", "Completed"])
+            
             submitted = st.form_submit_button("Update Status")
             if submitted:
                 run_query(
@@ -263,11 +294,12 @@ elif choice == "✏️ CRUD Operations":
                 )
                 st.success("✅ Claim status updated successfully!")
 
-    # Delete Record
+    # DELETE RECORD
     elif crud_menu == "Delete Record":
         with st.form("delete_record"):
             table = st.selectbox("Table", ["food_listings", "claims"])
             record_id = st.number_input("Record ID", min_value=1)
+            
             submitted = st.form_submit_button("Delete")
             if submitted:
                 id_col = "Food_ID" if table == "food_listings" else "Claim_ID"
