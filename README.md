@@ -30,7 +30,7 @@ This project uses a **SQLite database** to store food donation data and provides
 
 ---
 
-## 🗄 Database Structure
+## 🗄 Database Schema:
 
 **Tables:**
 1. **providers**: Stores provider details (Provider_ID, Name, Provider_Type, City, Contact)
@@ -39,6 +39,8 @@ This project uses a **SQLite database** to store food donation data and provides
 4. **claims**: Stores claim transactions for food items (Claim_ID, Food_ID, Receiver_ID, Status)
 
 ---
+✅ **ER Diagram:**
+<img width="288" height="212" alt="image" src="https://github.com/user-attachments/assets/cefd945d-fdb3-4334-9e28-df60aa3112d9" />
 
 ## 🚀 How to Run Locally
 
@@ -54,7 +56,13 @@ Make sure you have Python 3.x installed. Then run:
 pip install -r requirements.txt
 ```
 
-### 3️⃣ Run the App
+### 3️⃣ Ensure Database is Available
+The food_wastage.db file is included in the repo with all required tables and sample data.
+If missing, run:
+```bash
+python create_database.py
+```
+### 4️⃣ Run the App
 ```bash
 streamlit run app.py
 ```
